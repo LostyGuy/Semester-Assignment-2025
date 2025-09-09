@@ -1,8 +1,8 @@
 # Semester-Assignment-1st-2025
-WebApp - Github
+    WebApp - Github
 
-WebAppURL - https://github.com/LostyGuy
+    WebAppURL - https://github.com/LostyGuy
 
-Why? - I see my future in it (I bet)
+    Why? - I see my future in it (I bet)
 
-What will I learn? - We'll see when we get there :)
+    What will I learn? - We'll see when we get theres
