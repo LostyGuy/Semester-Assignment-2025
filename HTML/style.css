@@ -1,0 +1,70 @@
+.suse-mono{
+  font-family: "SUSE Mono", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-style: normal;
+
+}
+
+body{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 100px;
+    flex-direction: column; 
+    min-height: 100vh;  
+    color: white;
+    font-family: "Suse Mono";
+    background-image: url("Images/main-wallpaper.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+    margin: 0;
+
+}
+
+.header{
+    background-color: rgba(63, 61, 61, 0.5);
+    text-align: center;
+    padding: 5px;
+    margin-top: 15px;
+    border-radius: 10px;
+
+}
+
+.navigation {
+    background-image: url("Images/blur.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+    border-radius: 10px;
+    min-width: 20%;
+    min-height: 20%;
+    padding: 5%;
+
+}
+
+.four_tiles{
+    display: inline-block;
+    width: 30%;
+    height: 30%;
+    margin: auto;
+
+}
+
+.four_tiles > button{
+    background: transparent;
+    border: none;
+
+}
+
+.four_tiles > a{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    text-decoration: none !important;
+    color: inherit !important;
+    display: inline-block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    
+}
