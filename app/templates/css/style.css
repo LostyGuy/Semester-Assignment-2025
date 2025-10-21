@@ -1,0 +1,10 @@
+body{
+    background-color: black;
+    color: white;
+    text-decoration: none;
+    display: inline-block;
+}
+body > a {
+    text-decoration: none;
+    color: white;
+}

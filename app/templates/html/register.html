@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <a href="/">Home Page</a>
+    <br><br><br>
+
+    <form action="/register_request" method="post">
+        <label for="nn">Nickname</label>
+        <input type="text" name="nickname" id="nn">
+        <br>
+
+        <label for="em">Email</label>
+        <input type="email" name="email" id="em">
+        <br>
+
+        <label for="pw">Password</label>
+        <input type="password" name="passwd" id="pw">
+
+        <button type="submit">Register</button>
+    </form>
+    <p id="status"></p>
+
+    <script>
+        const HTML_Snippet = {{register_status | default(None) | tojson}};
+        let paragraph = document.getElementById("status");
+
+        if (HTML_Snippet == true) {
+            paragraph.innerHTML("Registered successfully");
+            paragraph.style.color("green");
+        }else if (HTML_Snippet == false) {
+            paragraph.innerHTML("Register failed");
+            paragraph.style.color("red");
+        }
+    </script>
+</body>
+</html>

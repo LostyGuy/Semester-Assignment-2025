@@ -1,0 +1,13 @@
+.venv
+app
+    python
+        __init__.py
+        main.py
+        models..py
+    static
+    templates
+        css
+            style.css
+        html
+            index.html
+            login.html
