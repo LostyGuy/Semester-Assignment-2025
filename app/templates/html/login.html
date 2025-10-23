@@ -7,11 +7,20 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    
+    <h1>Login</h1>
     <a href="/">Home Page</a>
     <a href="/profile">Profile</a>
     <a href="/search">Search</a>
-    {{a}}
+
+    <form action="/login_request" method="post">
+        <label for="log">Login</label>
+        <input type="text" name="email" id="log">
+        <br>
+
+        <label for="password">Password</label>
+        <input type="password" name="password" id="log">
+        <button type="submit">Log In</button>
+    </form>
 
     <section class="four_tiles"></section>
 </body>

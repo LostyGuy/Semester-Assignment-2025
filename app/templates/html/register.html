@@ -25,7 +25,9 @@
         <button type="submit">Register</button>
     </form>
     <p id="status"></p>
+        
 
+    <!-- Something's off -->
     <script>
         const HTML_Snippet = {{register_status | default(None) | tojson}};
         let paragraph = document.getElementById("status");
