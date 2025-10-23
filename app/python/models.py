@@ -7,23 +7,23 @@ class users(Base):
         Integer,
         primary_key=True,
         autoincrement=True,
-        index=True
+        index=True,
         )
     nickname: str = Column(
         String(20),
-        index=True
+        index=True,
         )
     email: str = Column(
         String(20),
-        index=True
+        index=True,
         )
     hashed_password: str = Column(
         String(30),
-        index=True
+        index=True,
         )
     time_stamp: str = Column(
-        String(10),
-        index=True
+        TIMESTAMP,
+        index=True,
         )
     
 class profile(Base):
@@ -32,16 +32,38 @@ class profile(Base):
         Integer,
         primary_key=True,
         autoincrement=True,
-        index=True
+        index=True,
         )
     user_ID : int = Column(
         Integer,
-        index=True)
+        index=True,
+        )
     content: str = Column(
         String(20),
-        index=True
+        index=True,
         )
     time_stamp: str = Column(
-        String(10),
-        index=True
+        TIMESTAMP,
+        index=True,
         )
+    
+class session(Base):
+    __tablename__ = "session"
+    ID: int = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        index=True,
+    )
+    user_ID: int = Column(
+        Integer,
+        index=True,
+    )
+    time_stamp: str = Column(
+        TIMESTAMP,
+        index=True,
+    )
+    token_expires: str = Column(
+        TIMESTAMP,
+        index=True,
+    )
