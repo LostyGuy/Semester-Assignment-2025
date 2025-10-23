@@ -18,6 +18,7 @@ log.basicConfig(filemode="a",
 def log_info(*message) -> None:
     log.info("-" * 20)
     log.info(" ".join(str(m) for m in message))
+    log.info("-" * 20)
 
 def current_time() -> TIMESTAMP:
     CrT : TIMESTAMP = dt.datetime.now()
@@ -73,7 +74,6 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
         return login_attempt_result, get_user_ID
     
     login_data = await request.form()
-    log_info(login_data)
         
     login, hashed_password = get_data(login_data=login_data)
     login_attempt_result, get_user_ID = login_attempt(login = login, hashed_password= hashed_password)
