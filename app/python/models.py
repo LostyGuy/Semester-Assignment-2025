@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Float, TIMESTAMP, Boolean
 from python.database import Base
 
 class users(Base):
@@ -53,6 +53,10 @@ class session(Base):
         Integer,
         primary_key=True,
         autoincrement=True,
+        index=True,
+    )
+    hash_user_ID: int = Column(
+        Integer,
         index=True,
     )
     user_ID: int = Column(

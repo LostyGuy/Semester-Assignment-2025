@@ -81,12 +81,16 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
     if login_attempt_result:
         session_cookie = models.session(
             user_ID = get_user_ID,
+            hash_user_ID = hashlib.sha256(
+                str(get_user_ID).encode()
+            ).hexdigest(),
             time_stamp = current_time(),
             token_expires = token_time(),
         )
         try:
             db.add(session_cookie)
             db.commit()
+                
             log_info("Session created for", get_user_ID, session_cookie)
         except Exception as e:
             log_info(e)
