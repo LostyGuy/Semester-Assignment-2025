@@ -55,11 +55,11 @@ class session(Base):
         autoincrement=True,
         index=True,
     )
-    hash_user_ID: int = Column(
+    user_ID: int = Column(
         Integer,
         index=True,
     )
-    user_ID: int = Column(
+    hash_user_ID: int = Column(
         Integer,
         index=True,
     )
@@ -71,3 +71,18 @@ class session(Base):
         TIMESTAMP,
         index=True,
     )
+    
+class secret(Base):
+    __tablename__ = "7365637265745f64617461"
+    ID: int = Column(
+        Integer,
+        index = True,
+        primary_key = True,
+        unique = True,
+        autoincrement= True,
+    )
+    SECRET_SALT_KEY: str = Column(
+        String,
+        nullable= False,   
+    )
+    
