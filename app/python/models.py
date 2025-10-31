@@ -83,6 +83,11 @@ class secret(Base):
     )
     SECRET_SALT_KEY: str = Column(
         String,
+        index=True,
         nullable= False,   
     )
-    
+    PRIVATE_JWT_KEY: str = Column(
+        String,
+        index= True,
+        nullable= False,
+    )

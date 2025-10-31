@@ -10,9 +10,10 @@ import logging as log
 import hashlib
 import datetime as dt
 from sqlalchemy import TIMESTAMP
-#! jwt packages
 from jwcrypto.jwk import JWK
 from jwt import JWT, jwk_from_dict
+import json
+
 jwt = JWT()
 
 log.basicConfig(filemode="a", 
@@ -25,34 +26,31 @@ def log_info(*message) -> None:
     log.info(" ".join(str(m) for m in message))
     log.info("-" * 20)
 
-def current_time() -> TIMESTAMP:
-    CrT : TIMESTAMP = dt.datetime.now(dt.timezone.utc)
-    return  CrT
-
-def token_time() -> TIMESTAMP:
-    TkT : TIMESTAMP = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=60)
-    return  TkT
-
-def create_JWT_key() -> str:
-    jwk = JWK.generate(alg="RS256", kid=..., kty=..., use=..., size=2048)
+#! Run only one time and save it somewhere safe
+#! -------------------------------------------------------    
+# def create_JWT_key() -> str:
+#     jwk = JWK.generate(alg="RS256", kid="666", kty="RSA", use="sig", size=2048)
+#     log_info("Private||Public",jwk.export_private(as_dict=True), jwk.export_public(as_dict=True))
+# create_JWT_key()
+#! -------------------------------------------------------  
     
-def create_JWT_token(iss_endpoint: str, aud_endpoint: str, user_ID: str, nickname: str,encription_key: str,) -> dict:
-    now = dt.datetime()
+def create_encoded_JWT_token(iss_endpoint: str, aud_endpoint: str, user_ID: str, nickname: str,encription_key: dict,) -> str: # Token
+    encription_key: str = jwk_from_dict(encription_key)
+    now = dt.datetime.now(dt.timezone.utc)
+    
     payload = {
         "iss" : f"https:127.0.0.1/8000/{iss_endpoint}",
         "aud" : f"https:127.0.0.1/8000/{aud_endpoint}",
-        "sub" : user_ID,
+        "sub" : str(user_ID),
         "nickname" : nickname,
-        "iat" : now,
-        "exp" : now + dt.timedelta(hours=24),
-     }
-    return jwt.encode(payload=payload, key=encription_key, alg="HS256")
-    
-#! JWT Library
-# TODO: \/ for each endpoint if user is loged in -> preventing going on endpoints without authorization 
-def JWT_token_validation(JWT_token) -> bool:
-    JWT_token: str = ... # comes from web browser
-    JWT_token.decode()
+        "iat" : int(now.timestamp()),
+        "exp" : int((now + dt.timedelta(hours=6)).timestamp()),
+    }
+    return jwt.encode(payload=payload, key=encription_key, alg="RS256")
+
+def encoded_JWT_token_validation(encryption_key: dict, JWT_token: str) -> dict: # Payload
+    encryption_key: str = jwk_from_dict(encryption_key)
+    return jwt.decode(message=JWT_token ,key=encryption_key, algorithms=["RS256"])
     
 app = FastAPI()
 
@@ -93,7 +91,7 @@ async def register_request(request: Request, db: Session = Depends(database.get_
         nickname = form_nickname,
         email = form_email,
         hashed_password = hashed_passwd,
-        time_stamp = current_time()
+        time_stamp = dt.datetime.now()
     )
 
     try:
@@ -115,11 +113,7 @@ async def register_request(request: Request, db: Session = Depends(database.get_
 @app.get("/login", response_class=HTMLResponse, name="login")
 async def login_page(request: Request, session: str = Cookie(default=None, alias="session")):
     
-    #! Vulnerable method
-    if session == "":
-        return templates.TemplateResponse("login.html", {"request" : request, "session": session})
-    else:
-        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
+    return templates.TemplateResponse("login.html", {"request" : request, "session": session})
 
 # * Quality of Life Feature [QoLF]
 # TODO: \/ Dynamic JWT_token expire? """ By default 60 minutes but don't log out if user is still active -> extend JWT_token expire time """
@@ -127,7 +121,6 @@ async def login_page(request: Request, session: str = Cookie(default=None, alias
 async def login_request(request: Request, db: Session = Depends(database.get_db)):
     
     hash_salt: str = (db.query(models.secret.SECRET_SALT_KEY).filter(models.secret.ID == 1).first())[0]
-    log_info(hash_salt)
     
     def get_data(login_data) -> str:
         form_login: str = login_data.get("email")
@@ -158,53 +151,21 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
     login, hashed_password = get_data(login_data=login_data)
     login_attempt_result, get_user_ID = login_attempt(login = login, hashed_password = hashed_password)
     
-    # * Creates cookies for session -> /move to JWT/
-    CrT: TIMESTAMP = current_time()
-    TkT: TIMESTAMP = token_time()
-    
-    # cookie_file <- ID, user_ID, hash_user_ID, JWT_token_value
     #private key is stored in other table without relation. Has to be accessed alone
-    # on each action -> endpoint action, reset expiration time so token is valid for 60minutes since last endpoint action
     
-    # TODO: \/ Refactor from just cookie_file entry to JWT_token stored in cookie_file entry and compare it to... [in progress]
+    # TODO: \/ on each action -> endpoint action, reset expiration time so token is valid for 60minutes since last endpoint action
     
     if login_attempt_result:
-        # session_cookie = models.session(
-        #     user_ID = get_user_ID,
-        #     hash_user_ID = hashlib.sha256(
-        #         str(get_user_ID).encode()
-        #     ).hexdigest(),
-        #     time_stamp = CrT,
-        #     token_expires = TkT,
-        #)
-        try:
-            
-            session_cookie: str = create_JWT_token()
-            
-            db.add(session_cookie)
-            db.commit()
-            log_info("Session created for", get_user_ID, session_cookie)
-        except Exception as e:
-            log_info("Session Error: ", e)
-            db.rollback()
-        
         response = RedirectResponse(app.url_path_for("login"), status_code= 303)
         try:
+            encryption_key: dict = json.loads(db.query(models.secret.PRIVATE_JWT_KEY).filter(models.secret.ID == 1).first()[0])
+            token = create_encoded_JWT_token("/login", "/loged/", get_user_ID, login, encription_key=encryption_key)
+            max_age_sec: int = 6 * 3600
             response.set_cookie(
-                key="session", 
-                value=str(
-                    db.query(models.session.hash_user_ID).filter(
-                        models.session.user_ID == get_user_ID,
-                        models.session.time_stamp == CrT,
-                        ).first()
-                ),
-                expires=(
-                    db.query(models.session.token_expires).filter(
-                        models.session.user_ID == get_user_ID,
-                        models.session.token_expires == TkT,
-                        ).first()
-                ), 
-                httponly=True
+                key="session",
+                value=token,
+                max_age= max_age_sec,
+                httponly=True,
             )
         except Exception as e:
             log_info("Cookie Error: ", e)
