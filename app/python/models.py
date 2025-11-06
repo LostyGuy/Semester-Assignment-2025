@@ -59,8 +59,8 @@ class session(Base):
         Integer,
         index=True,
     )
-    hash_user_ID: int = Column(
-        Integer,
+    token_value: int = Column(
+        String,
         index=True,
     )
     time_stamp: str = Column(

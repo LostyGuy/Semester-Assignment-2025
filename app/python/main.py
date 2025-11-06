@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Request, Depends, Cookie
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-#! Jinja partial package
 from fastapi.responses import HTMLResponse, RedirectResponse
 from python import models, database
 from sqlalchemy.orm import Session
+from sqlalchemy import exists
 from pathlib import Path
 import logging as log
 import hashlib
@@ -51,22 +51,40 @@ def create_encoded_JWT_token(iss_endpoint: str, aud_endpoint: str, user_ID: str,
 def encoded_JWT_token_validation(encryption_key: dict, JWT_token: str) -> dict: # Payload
     encryption_key: str = jwk_from_dict(encryption_key)
     return jwt.decode(message=JWT_token ,key=encryption_key, algorithms=["RS256"])
-    
+
+def active_session_check(db, session) -> bool:
+    session_active: bool = db.query(
+        exists().where(
+            models.session.token_value == session,
+            models.session.token_expires > dt.datetime.now(dt.timezone.utc)
+        )
+    ).scalar()
+    log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
+    return session_active
+
 app = FastAPI()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# TODO: \/ How does exactly that works \/
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "templates")), name="static")
 #! partial CSS to partial HTML
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates/html"))
 
+#! partial HTML for loged and non-loged actions
 @app.get("/", response_class=HTMLResponse, name="index")
-async def main_page(request: Request, session: str = Cookie(default=None, alias="session")):  
+async def main_page(request: Request, session: str = Cookie(default=None, alias="session"), db: Session = Depends(database.get_db)):  
+    session_active = active_session_check(db, session)
+    HTML_Snippet = ...
+    #! reading from file to get HTML code
+    # if session_active:
+    #     HTML_Snippet: str = Path(r"templates/html_snippets/index_logged.html").read_text(encoding="utf-8")
+    # else:
+    #     HTML_Snippet: str = Path(r"templates/html_snippets/index_non_logged.html").read_text(encoding="utf-8")
     
-    #! partial HTML code injection for loged and non-loged view
-    
-    return templates.TemplateResponse("index.html", {"request" : request, "session": session})
+    return templates.TemplateResponse("index.html", {"request" : request, "session": session, "HTML_Snippet" : HTML_Snippet})
 
+#! partial HTML for loged and non-loged actions
 @app.get("/register", response_class=HTMLResponse, name="register")
 async def register_page(request: Request, session: str = Cookie(default=None, alias="session")):
     
@@ -111,10 +129,16 @@ async def register_request(request: Request, db: Session = Depends(database.get_
     return RedirectResponse(url=app.url_path_for("register"), status_code= 303)
 
 @app.get("/login", response_class=HTMLResponse, name="login")
-async def login_page(request: Request, session: str = Cookie(default=None, alias="session")):
+async def login_page(request: Request, db: Session = Depends(database.get_db),session: str = Cookie(default=None, alias="session")):
     
-    return templates.TemplateResponse("login.html", {"request" : request, "session": session})
-
+    session_active = active_session_check(db, session)
+    if session_active:
+        log_info("Session is active: ", session_active)
+        return RedirectResponse(url=app.url_path_for("index"),status_code=303)
+    else:
+        log_info("Session is not active: ", session_active)
+        return templates.TemplateResponse("login.html", {"request" : request, "session" : session})
+    
 # * Quality of Life Feature [QoLF]
 # TODO: \/ Dynamic JWT_token expire? """ By default 60 minutes but don't log out if user is still active -> extend JWT_token expire time """
 @app.post("/login_request", response_class=HTMLResponse)
@@ -159,7 +183,13 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
         response = RedirectResponse(app.url_path_for("login"), status_code= 303)
         try:
             encryption_key: dict = json.loads(db.query(models.secret.PRIVATE_JWT_KEY).filter(models.secret.ID == 1).first()[0])
-            token = create_encoded_JWT_token("/login", "/loged/", get_user_ID, login, encription_key=encryption_key)
+            token = create_encoded_JWT_token(
+                "/login", 
+                "/loged/", 
+                get_user_ID, 
+                login, 
+                encription_key=encryption_key
+            )
             max_age_sec: int = 6 * 3600
             response.set_cookie(
                 key="session",
@@ -167,6 +197,20 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
                 max_age= max_age_sec,
                 httponly=True,
             )
+            #! session values stored in DB as log
+            try:
+                cookie_entry = models.session(
+                    user_ID = get_user_ID,
+                    token_value = token,
+                    time_stamp = dt.datetime.now(dt.timezone.utc),
+                    token_expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours= 6),
+                )
+                db.add(cookie_entry)
+                db.commit()
+                log_info("Cookie entry sucessful: ", cookie_entry)
+            except Exception as e:
+                log_info("Cookie DB entry Error: ", e)
+                return response
         except Exception as e:
             log_info("Cookie Error: ", e)
             response.headers["cookie_setting_error"] = "True"
@@ -178,30 +222,23 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
 # TODO: \/ 
 @app.post("/loged/logout_request", response_class=HTMLResponse)
 async def logout_request(request: Request, db: Session = Depends(database.get_db)):
+    #kill session -> set expire_time to localtime
     
     return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
-# TODO: \/ 
+# TODO: \/
+#! partial HTML for loged and non-loged actions
 @app.get("/loged/profile", response_class=HTMLResponse)
 async def profile(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     raise NotImplementedError
-
-    #! Vulnerable method
-    if session == "":
-        return templates.TemplateResponse("profile.html", {"request" : request, "session": session})
-    else:
-        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
+    return templates.TemplateResponse("profile.html", {"request" : request, "session": session})
 
 # TODO: \/ 
+#! partial HTML for loged and non-loged actions
 @app.get("/loged/profile/add_project", response_class=HTMLResponse)
 async def add_project(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     raise NotImplementedError
-
-    #! Vulnerable method
-    if session == "":
-        return templates.TemplateResponse("profile.html", {"request" : request, "session": session})
-    else:
-        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
+    return templates.TemplateResponse("profile.html", {"request" : request, "session": session})
 
 # TODO: \/ 
 @app.get("/search", response_class=HTMLResponse)
