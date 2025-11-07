@@ -64,14 +64,7 @@ def active_session_check(db, session) -> bool:
 
 def active_session_HTML_Snippet(db, session, logged_path, non_logged_path) -> str:
     
-    session_active: bool = db.query(
-        exists().where(
-            models.session.token_value == session,
-            models.session.token_expires > dt.datetime.now(dt.timezone.utc)
-        )
-    ).scalar()
-    log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
-    
+    session_active: bool = active_session_check(db, session)
     if session_active:
         HTML_Snippet: str = logged_path
     else:
