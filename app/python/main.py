@@ -62,6 +62,22 @@ def active_session_check(db, session) -> bool:
     log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
     return session_active
 
+def active_session_HTML_Snippet(db, session, logged_path, non_logged_path) -> str:
+    
+    session_active: bool = db.query(
+        exists().where(
+            models.session.token_value == session,
+            models.session.token_expires > dt.datetime.now(dt.timezone.utc)
+        )
+    ).scalar()
+    log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
+    
+    if session_active:
+        HTML_Snippet: str = logged_path
+    else:
+        HTML_Snippet: str = non_logged_path
+    return HTML_Snippet, session_active
+
 app = FastAPI()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -71,16 +87,14 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "templates")), name="s
 #! partial CSS to partial HTML
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates/html"))
 
-#! partial HTML for loged and non-loged actions
 @app.get("/", response_class=HTMLResponse, name="index")
 async def main_page(request: Request, session: str = Cookie(default=None, alias="session"), db: Session = Depends(database.get_db)):  
-    session_active = active_session_check(db, session)
-    HTML_Snippet = ...
-    #! reading from file to get HTML code
-    # if session_active:
-    #     HTML_Snippet: str = Path(r"templates/html_snippets/index_logged.html").read_text(encoding="utf-8")
-    # else:
-    #     HTML_Snippet: str = Path(r"templates/html_snippets/index_non_logged.html").read_text(encoding="utf-8")
+    HTML_Snippet, session_active = active_session_HTML_Snippet(
+        db,
+        session, 
+        logged_path="partials/index_logged.html", 
+        non_logged_path="partials/index_non_logged.html"
+        )
     
     return templates.TemplateResponse("index.html", {"request" : request, "session": session, "HTML_Snippet" : HTML_Snippet})
 
