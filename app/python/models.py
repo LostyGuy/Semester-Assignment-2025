@@ -71,6 +71,11 @@ class session(Base):
         TIMESTAMP,
         index=True,
     )
+    status: str = Column(
+        String,
+        index=True,
+        default="accessible"
+    )
     
 class secret(Base):
     __tablename__ = "7365637265745f64617461"

@@ -56,7 +56,8 @@ def active_session_check(db, session) -> bool:
     session_active: bool = db.query(
         exists().where(
             models.session.token_value == session,
-            models.session.token_expires > dt.datetime.now(dt.timezone.utc)
+            models.session.token_expires > dt.datetime.now(dt.timezone.utc),
+            models.session.status == "accessible",
         )
     ).scalar()
     log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
@@ -80,31 +81,41 @@ def active_session_HTML_Snippet(db, session, logged_path, non_logged_path) -> st
 
 app = FastAPI()
 
+Header_Snippet = "partials/unified_header.html"
+Footer_Snippet = "partials/unified_footer.html"
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# TODO: \/ How does exactly that works \/
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "templates")), name="static")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "templates")), name="templates")
+app.mount("/images", StaticFiles(directory=str(BASE_DIR / "images")), name="images")
 #! partial CSS to partial HTML
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates/html"))
 
 @app.get("/", response_class=HTMLResponse, name="index")
 async def main_page(request: Request, session: str = Cookie(default=None, alias="session"), db: Session = Depends(database.get_db)):  
-    HTML_Snippet, session_active = active_session_HTML_Snippet(
+    Status_Snippet, session_active = active_session_HTML_Snippet(
         db,
         session, 
         logged_path="partials/index_logged.html", 
         non_logged_path="partials/index_non_logged.html"
         )
+    Body_Snippet = "partials/index_body.html"
     
-    return templates.TemplateResponse("index.html", {"request" : request, "session": session, "HTML_Snippet" : HTML_Snippet})
+    return templates.TemplateResponse("index.html", {"request" : request, "session": session, "Header_Snippet" : Header_Snippet,
+    "Status_Snippet" : Status_Snippet,
+    "Body_Snippet" : Body_Snippet,
+    "Footer_Snippet" : Footer_Snippet,
+    })
 
-#! partial HTML for loged and non-loged actions
 @app.get("/register", response_class=HTMLResponse, name="register")
-async def register_page(request: Request, session: str = Cookie(default=None, alias="session")):
+async def register_page(request: Request, db: Session = Depends(database.get_db),session: str = Cookie(default=None, alias="session")):
     
-    ...
+    active_session = active_session_check(db=db, session=session)
     
-    return templates.TemplateResponse("register.html", {"request" : request, "session": session})
+    if active_session:
+        return RedirectResponse(app.url_path_for("index"),status_code=303)
+    else:
+        return templates.TemplateResponse("register.html", {"request" : request, "session": session})
 
 @app.post("/register_request", response_class=HTMLResponse)
 async def register_request(request: Request, db: Session = Depends(database.get_db)):
@@ -218,6 +229,7 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
                     token_value = token,
                     time_stamp = dt.datetime.now(dt.timezone.utc),
                     token_expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours= 6),
+                    default = "accessible",
                 )
                 db.add(cookie_entry)
                 db.commit()
@@ -233,10 +245,18 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
     else:
         log_info("LoginError: ",login_attempt_result)
 
+@app.get("/loged/logout_request", response_class=HTMLResponse)
+async def logout(request: Request):
+    return RedirectResponse(url=app.url_path_for("logout"), status_code=303)
+
 # TODO: \/ 
-@app.post("/loged/logout_request", response_class=HTMLResponse)
-async def logout_request(request: Request, db: Session = Depends(database.get_db)):
+@app.post("/loged/logout_request", response_class=HTMLResponse, name="logout")
+async def logout_request(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     #kill session -> set expire_time to localtime
+    
+    revoke_token = db.query(models.session).filter(models.session.token_value == "session").first()
+    revoke_token.status = "revoked"
+    db.commit()
     
     return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
@@ -244,8 +264,23 @@ async def logout_request(request: Request, db: Session = Depends(database.get_db
 #! partial HTML for loged and non-loged actions
 @app.get("/loged/profile", response_class=HTMLResponse)
 async def profile(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
-    raise NotImplementedError
-    return templates.TemplateResponse("profile.html", {"request" : request, "session": session})
+    Status_Snippet, active_session = active_session_HTML_Snippet(
+        db,
+        session, 
+        logged_path="partials/index_logged.html", 
+        non_logged_path="partials/index_non_logged.html"
+        )
+    Body_Snippet = "partials/profile_body.html"
+    if active_session:
+        return templates.TemplateResponse("profile.html", {"request" : request, 
+        "session": session,
+        "Header_Snippet" : Header_Snippet,
+        "Status_Snippet" : Status_Snippet,
+        "Body_Snippet" : Body_Snippet,
+        "Footer_Snippet" : Footer_Snippet,
+        })
+    else:
+        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
 # TODO: \/ 
 #! partial HTML for loged and non-loged actions

@@ -4,20 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/profile_style.css">
 </head>
 <body>
 
-    <a href="/">Home Page</a>
-
-    <section class="projects_space">
-        {% for i in projects %}
-            <section class="nth_project" id="{{projects[i][ID]}}">
-                <p>{{projects[i][project_title]}}</p>
-                <h5>{{projects[i][project_content]}}</h5>
-            </section>
-        {% endfor %}
-    </section>
+    {%include Header_Snippet%}
+    {%include Body_Snippet%}
+    {%include Footer_Snippet%}
     
 
 </body>
