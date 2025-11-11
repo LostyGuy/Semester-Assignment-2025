@@ -74,6 +74,7 @@ def active_session_HTML_Snippet(db, session) -> str:
 
 app = FastAPI()
 
+#* Hard Coded Values for WWW Header and Footer
 Header_Snippet = "partials/unified_header.html"
 Footer_Snippet = "partials/unified_footer.html"
 
@@ -250,40 +251,76 @@ async def logout(request: Request, db: Session = Depends(database.get_db), sessi
     
     return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
-# TODO: \/
-#! partial HTML for loged and non-loged actions
-@app.get("/loged/profile", response_class=HTMLResponse)
+@app.get("/loged/profile", response_class=HTMLResponse, name="profile")
 async def profile(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     Status_Snippet, active_session = active_session_HTML_Snippet(
         db,
         session,
         )
+    
     Body_Snippet = "partials/profile_body.html"
     if active_session:
+        user_ID: int = db.query(models.session.user_ID).filter(models.session.token_value == session).first()[0]
+        DB_Projects = db.query(models.profile.project_title, models.profile.project_content).filter(models.profile.user_ID == user_ID)
+        
+        log_info("Profile Projects: ", DB_Projects)
+        
         return templates.TemplateResponse("profile.html", {"request" : request, 
         "session": session,
         "Header_Snippet" : Header_Snippet,
         "Status_Snippet" : Status_Snippet,
         "Body_Snippet" : Body_Snippet,
         "Footer_Snippet" : Footer_Snippet,
+        "DB_Projects" : DB_Projects,
         })
+        
     else:
-        return templates.TemplateResponse("index.html", {"request" : request, 
-        "session" : session,
+        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
+
+@app.get("/loged/profile/add_project", response_class=HTMLResponse, name="add_project")
+async def add_project(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
+    
+    Status_Snippet, active_session = active_session_HTML_Snippet(
+        db,
+        session,
+        )
+    
+    Body_Snippet = "partials/add_project_body.html"
+    if active_session:
+        
+        return templates.TemplateResponse("add_project.html", {"request" : request, 
+        "session": session,
         "Header_Snippet" : Header_Snippet,
         "Status_Snippet" : Status_Snippet,
         "Body_Snippet" : Body_Snippet,
-        "Footer_Snippet" : Footer_Snippet,})
+        "Footer_Snippet" : Footer_Snippet,
+        })
+        
+    else:
+        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
-# TODO: \/ 
-#! partial HTML for loged and non-loged actions
-@app.get("/loged/profile/add_project", response_class=HTMLResponse)
+@app.post("/loged/profile/add_project_request", response_class=HTMLResponse)
 async def add_project(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
-    raise NotImplementedError
-    return templates.TemplateResponse("profile.html", {"request" : request, "session": session})
+    
+    user_ID: int = db.query(models.session.user_ID).filter(models.session.token_value == session).first()[0]
+    
+    project_data = await request.form()
+    project_title: str = str(project_data.get("project_title"))
+    project_content: str = str(project_data.get("project_content"))
+    
+    new_project_entry = models.profile(
+        user_ID = user_ID,
+        project_title = project_title,
+        project_content = project_content,
+        time_stamp = dt.datetime.now(dt.timezone.utc),
+    )
+    db.add(new_project_entry)
+    db.commit()
+    
+    return RedirectResponse(url=app.url_path_for("profile"), status_code=303)
 
 # TODO: \/ 
-@app.get("/search", response_class=HTMLResponse)
+@app.post("/search", response_class=HTMLResponse)
 async def search(request: Request, session: str = Cookie(default=None, alias="session")):
     raise NotImplementedError
     return templates.TemplateResponse("search.html", {"request" : request, "session": session})

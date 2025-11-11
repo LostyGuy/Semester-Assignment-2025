@@ -27,18 +27,22 @@ class users(Base):
         )
     
 class profile(Base):
-    __tablename__ = "profiles"
+    __tablename__ = "profile_data"
     ID: int = Column(
         Integer,
         primary_key=True,
         autoincrement=True,
         index=True,
         )
-    user_ID : int = Column(
+    user_ID: int = Column(
         Integer,
         index=True,
         )
-    content: str = Column(
+    project_title: str = Column(
+        String(20), 
+        index=True
+        )
+    project_content: str = Column(
         String(20),
         index=True,
         )
