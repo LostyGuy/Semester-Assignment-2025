@@ -63,14 +63,14 @@ def active_session_check(db, session) -> bool:
     log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
     return session_active
 
-def active_session_HTML_Snippet(db, session, logged_path, non_logged_path) -> str:
+def active_session_HTML_Snippet(db, session) -> str:
     
     session_active: bool = active_session_check(db, session)
     if session_active:
-        HTML_Snippet: str = logged_path
+        Status_Snippet: str = "partials/index_logged.html"
     else:
-        HTML_Snippet: str = non_logged_path
-    return HTML_Snippet, session_active
+        Status_Snippet: str = "partials/index_non_logged.html"
+    return Status_Snippet, session_active
 
 app = FastAPI()
 
@@ -86,12 +86,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates/html"))
 
 @app.get("/", response_class=HTMLResponse, name="index")
 async def main_page(request: Request, session: str = Cookie(default=None, alias="session"), db: Session = Depends(database.get_db)):  
-    Status_Snippet, session_active = active_session_HTML_Snippet(
-        db,
-        session, 
-        logged_path="partials/index_logged.html", 
-        non_logged_path="partials/index_non_logged.html"
-        )
+    Status_Snippet, session_active = active_session_HTML_Snippet(db, session,)
     Body_Snippet = "partials/index_body.html"
     
     return templates.TemplateResponse("index.html", {"request" : request, "session": session, "Header_Snippet" : Header_Snippet,
@@ -150,12 +145,21 @@ async def register_request(request: Request, db: Session = Depends(database.get_
 async def login_page(request: Request, db: Session = Depends(database.get_db),session: str = Cookie(default=None, alias="session")):
     
     session_active = active_session_check(db, session)
+    
     if session_active:
         log_info("Session is active: ", session_active)
         return RedirectResponse(url=app.url_path_for("index"),status_code=303)
     else:
         log_info("Session is not active: ", session_active)
-        return templates.TemplateResponse("login.html", {"request" : request, "session" : session})
+        Status_Snippet, active_session = active_session_HTML_Snippet(db=db, session=session)
+        # Body_Snippet = "partials/login_body.html"
+        return templates.TemplateResponse("login.html", {"request" : request, 
+        "session" : session,
+        "Header_Snippet" : Header_Snippet,
+        "Status_Snippet" : Status_Snippet,
+        # "Body_Snippet" : Body_Snippet,
+        "Footer_Snippet" : Footer_Snippet,
+        })
     
 # * Quality of Life Feature [QoLF]
 # TODO: \/ Dynamic JWT_token expire? """ By default 60 minutes but don't log out if user is still active -> extend JWT_token expire time """
@@ -221,8 +225,7 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
                     user_ID = get_user_ID,
                     token_value = token,
                     time_stamp = dt.datetime.now(dt.timezone.utc),
-                    token_expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours= 6),
-                    default = "accessible",
+                    token_expires = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours= 6)
                 )
                 db.add(cookie_entry)
                 db.commit()
@@ -239,16 +242,10 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
         log_info("LoginError: ",login_attempt_result)
 
 @app.get("/loged/logout_request", response_class=HTMLResponse)
-async def logout(request: Request):
-    return RedirectResponse(url=app.url_path_for("logout"), status_code=303)
-
-# TODO: \/ 
-@app.post("/loged/logout_request", response_class=HTMLResponse, name="logout")
-async def logout_request(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
-    #kill session -> set expire_time to localtime
+async def logout(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     
-    revoke_token = db.query(models.session).filter(models.session.token_value == "session").first()
-    revoke_token.status = "revoked"
+    session_update = db.query(models.session).filter(models.session.token_value == session).first()
+    session_update.status = "revoked"
     db.commit()
     
     return RedirectResponse(url=app.url_path_for("index"), status_code=303)
@@ -259,9 +256,7 @@ async def logout_request(request: Request, db: Session = Depends(database.get_db
 async def profile(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     Status_Snippet, active_session = active_session_HTML_Snippet(
         db,
-        session, 
-        logged_path="partials/index_logged.html", 
-        non_logged_path="partials/index_non_logged.html"
+        session,
         )
     Body_Snippet = "partials/profile_body.html"
     if active_session:
@@ -273,7 +268,12 @@ async def profile(request: Request, db: Session = Depends(database.get_db), sess
         "Footer_Snippet" : Footer_Snippet,
         })
     else:
-        return RedirectResponse(url=app.url_path_for("index"), status_code=303)
+        return templates.TemplateResponse("index.html", {"request" : request, 
+        "session" : session,
+        "Header_Snippet" : Header_Snippet,
+        "Status_Snippet" : Status_Snippet,
+        "Body_Snippet" : Body_Snippet,
+        "Footer_Snippet" : Footer_Snippet,})
 
 # TODO: \/ 
 #! partial HTML for loged and non-loged actions
