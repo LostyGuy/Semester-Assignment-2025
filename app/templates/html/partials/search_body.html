@@ -1,0 +1,17 @@
+<main>
+    <br>
+    <section class="left">
+        <h1>Search Result For {{Search_Prompt}}</h1>
+        {%for block in Search_Result%}
+            <section class="block">
+                {{block[1]}}
+                <br>
+                {{block[2]}}
+            </section>
+            <br>
+        {%endfor%}
+    </section>
+    <section class="right">
+        Right Box
+    </section>
+</main>

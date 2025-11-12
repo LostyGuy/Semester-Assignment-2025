@@ -46,6 +46,10 @@ class profile(Base):
         String(20),
         index=True,
         )
+    private: str = Column(
+        Boolean,
+        index=True,
+        )
     time_stamp: str = Column(
         TIMESTAMP,
         index=True,

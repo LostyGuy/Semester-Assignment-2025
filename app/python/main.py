@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from python import models, database
 from sqlalchemy.orm import Session
-from sqlalchemy import exists
+from sqlalchemy import exists, or_, and_, func
 from pathlib import Path
 import logging as log
 import hashlib
@@ -300,7 +300,6 @@ async def add_project(request: Request, db: Session = Depends(database.get_db), 
     else:
         return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
-#! Private or Public Project in HTML form and in DB Entry
 @app.post("/loged/profile/add_project_request", response_class=HTMLResponse)
 async def add_project(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     
@@ -309,11 +308,14 @@ async def add_project(request: Request, db: Session = Depends(database.get_db), 
     project_data = await request.form()
     project_title: str = str(project_data.get("project_title"))
     project_content: str = str(project_data.get("project_content"))
+    project_is_private: bool = True if project_data.get("is_private") else False
+
     
     new_project_entry = models.profile(
         user_ID = user_ID,
         project_title = project_title,
         project_content = project_content,
+        private = project_is_private,
         time_stamp = dt.datetime.now(dt.timezone.utc),
     )
     db.add(new_project_entry)
@@ -321,8 +323,37 @@ async def add_project(request: Request, db: Session = Depends(database.get_db), 
     
     return RedirectResponse(url=app.url_path_for("profile"), status_code=303)
 
-# TODO: \/ 
-@app.post("/search", response_class=HTMLResponse)
-async def search(request: Request, session: str = Cookie(default=None, alias="session")):
-    raise NotImplementedError
-    return templates.TemplateResponse("search.html", {"request" : request, "session": session})
+# TODO: \/ JOIN on tables to display user's username instead of user_ID
+@app.get("/search_request", response_class=HTMLResponse)
+async def search(request: Request, session: str = Cookie(default=None, alias="session"), db: Session = Depends(database.get_db)):
+    Status_Snippet, active_session = active_session_HTML_Snippet(
+        db,
+        session,
+        )
+    Body_Snippet = "partials/search_body.html"
+
+    Search_Prompt: str = request.query_params.get("Search_Prompt")
+
+    Search_Result: dict = db.query(
+        models.profile.user_ID, 
+        models.profile.project_title, 
+        models.profile.project_content,
+        ).filter(
+            and_(
+                models.profile.private == False,
+                or_( 
+                    models.profile.project_title.like(f"%{Search_Prompt}%"),
+                    models.profile.project_content.like(f"%{Search_Prompt}%"),
+                )
+            )
+        ).all()
+    
+    return templates.TemplateResponse("search.html", {"request" : request, 
+        "session": session,
+        "Header_Snippet" : Header_Snippet,
+        "Status_Snippet" : Status_Snippet,
+        "Body_Snippet" : Body_Snippet,
+        "Footer_Snippet" : Footer_Snippet,
+        "Search_Result" : Search_Result,
+        "Search_Prompt" : Search_Prompt,
+        })
