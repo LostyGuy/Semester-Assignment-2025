@@ -60,7 +60,7 @@ def active_session_check(db, session) -> bool:
             models.session.status == "accessible",
         )
     ).scalar()
-    log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
+    # log_info("Active Session Check: ", session, dt.datetime.now(dt.timezone.utc))
     return session_active
 
 def active_session_HTML_Snippet(db, session) -> str:
@@ -148,10 +148,10 @@ async def login_page(request: Request, db: Session = Depends(database.get_db),se
     session_active = active_session_check(db, session)
     
     if session_active:
-        log_info("Session is active: ", session_active)
+        # log_info("Session is active: ", session_active)
         return RedirectResponse(url=app.url_path_for("index"),status_code=303)
     else:
-        log_info("Session is not active: ", session_active)
+        # log_info("Session is not active: ", session_active)
         Status_Snippet, active_session = active_session_HTML_Snippet(db=db, session=session)
         # Body_Snippet = "partials/login_body.html"
         return templates.TemplateResponse("login.html", {"request" : request, 
@@ -164,6 +164,7 @@ async def login_page(request: Request, db: Session = Depends(database.get_db),se
     
 # * Quality of Life Feature [QoLF]
 # TODO: \/ Dynamic JWT_token expire? """ By default 60 minutes but don't log out if user is still active -> extend JWT_token expire time """
+#! TODO: \/ Information for user when types wrong data
 @app.post("/login_request", response_class=HTMLResponse)
 async def login_request(request: Request, db: Session = Depends(database.get_db)):
     
@@ -185,10 +186,10 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
             models.users.hashed_password == hashed_password,
         ).one_or_none()[0] #returns int when .first() returns tuple
         if get_user_ID:
-            log_info("User exists")
+            # log_info("User exists")
             login_attempt_result: bool = True
         else:
-            log_info("Log In data are wrong")
+            # log_info("Log In data are wrong")
             login_attempt_result: bool = False
         
         return login_attempt_result, get_user_ID
@@ -230,12 +231,12 @@ async def login_request(request: Request, db: Session = Depends(database.get_db)
                 )
                 db.add(cookie_entry)
                 db.commit()
-                log_info("Cookie entry sucessful: ", cookie_entry)
+                # log_info("Cookie entry sucessful: ", cookie_entry)
             except Exception as e:
-                log_info("Cookie DB entry Error: ", e)
+                # log_info("Cookie DB entry Error: ", e)
                 return response
         except Exception as e:
-            log_info("Cookie Error: ", e)
+            # log_info("Cookie Error: ", e)
             response.headers["cookie_setting_error"] = "True"
             return response
         return response
@@ -263,7 +264,7 @@ async def profile(request: Request, db: Session = Depends(database.get_db), sess
         user_ID: int = db.query(models.session.user_ID).filter(models.session.token_value == session).first()[0]
         DB_Projects = db.query(models.profile.project_title, models.profile.project_content).filter(models.profile.user_ID == user_ID)
         
-        log_info("Profile Projects: ", DB_Projects)
+        # log_info("Profile Projects: ", DB_Projects)
         
         return templates.TemplateResponse("profile.html", {"request" : request, 
         "session": session,
@@ -299,6 +300,7 @@ async def add_project(request: Request, db: Session = Depends(database.get_db), 
     else:
         return RedirectResponse(url=app.url_path_for("index"), status_code=303)
 
+#! Private or Public Project in HTML form and in DB Entry
 @app.post("/loged/profile/add_project_request", response_class=HTMLResponse)
 async def add_project(request: Request, db: Session = Depends(database.get_db), session: str = Cookie(default=None, alias="session")):
     
