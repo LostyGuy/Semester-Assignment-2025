@@ -67,16 +67,16 @@ def active_session_HTML_Snippet(db, session) -> str:
     
     session_active: bool = active_session_check(db, session)
     if session_active:
-        Status_Snippet: str = "partials/index_logged.html"
+        Status_Snippet: str = "partials/unified/status_logged.html"
     else:
-        Status_Snippet: str = "partials/index_non_logged.html"
+        Status_Snippet: str = "partials/unified/status_non_logged.html"
     return Status_Snippet, session_active
 
 app = FastAPI()
 
 #* Hard Coded Values for WWW Header and Footer
-Header_Snippet = "partials/unified_header.html"
-Footer_Snippet = "partials/unified_footer.html"
+Header_Snippet = "partials/unified/unified_header.html"
+Footer_Snippet = "partials/unified/unified_footer.html"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -89,22 +89,31 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates/html"))
 async def main_page(request: Request, session: str = Cookie(default=None, alias="session"), db: Session = Depends(database.get_db)):  
     Status_Snippet, session_active = active_session_HTML_Snippet(db, session,)
     Body_Snippet = "partials/index_body.html"
+    CSS_Name = "index"
     
-    return templates.TemplateResponse("index.html", {"request" : request, "session": session, "Header_Snippet" : Header_Snippet,
+    return templates.TemplateResponse("layout.html", {"request" : request, "session": session, "Header_Snippet" : Header_Snippet,
     "Status_Snippet" : Status_Snippet,
     "Body_Snippet" : Body_Snippet,
     "Footer_Snippet" : Footer_Snippet,
+    "CSS_Name" : CSS_Name,
     })
 
 @app.get("/register", response_class=HTMLResponse, name="register")
 async def register_page(request: Request, db: Session = Depends(database.get_db),session: str = Cookie(default=None, alias="session")):
     
-    active_session = active_session_check(db=db, session=session)
+    Status_Snippet, session_active = active_session_HTML_Snippet(db, session,)
+    Body_Snippet = "partials/register_body.html"
+    CSS_Name = "register"
     
-    if active_session:
+    if session_active:
         return RedirectResponse(app.url_path_for("index"),status_code=303)
     else:
-        return templates.TemplateResponse("register.html", {"request" : request, "session": session})
+        return templates.TemplateResponse("layout.html", {"request" : request, "session": session, "Header_Snippet" : Header_Snippet,
+        "Status_Snippet" : Status_Snippet,
+        "Body_Snippet" : Body_Snippet,
+        "Footer_Snippet" : Footer_Snippet,
+        "CSS_Name" : CSS_Name,
+        })
 
 @app.post("/register_request", response_class=HTMLResponse)
 async def register_request(request: Request, db: Session = Depends(database.get_db)):
@@ -153,13 +162,16 @@ async def login_page(request: Request, db: Session = Depends(database.get_db),se
     else:
         # log_info("Session is not active: ", session_active)
         Status_Snippet, active_session = active_session_HTML_Snippet(db=db, session=session)
-        # Body_Snippet = "partials/login_body.html"
-        return templates.TemplateResponse("login.html", {"request" : request, 
+        Body_Snippet = "partials/login_body.html",
+        CSS_Name = "login"
+        
+        return templates.TemplateResponse("layout.html", {"request" : request, 
         "session" : session,
         "Header_Snippet" : Header_Snippet,
         "Status_Snippet" : Status_Snippet,
-        # "Body_Snippet" : Body_Snippet,
+        "Body_Snippet" : Body_Snippet,
         "Footer_Snippet" : Footer_Snippet,
+        "CSS_Name" : CSS_Name,
         })
     
 # * Quality of Life Feature [QoLF]
@@ -260,18 +272,18 @@ async def profile(request: Request, db: Session = Depends(database.get_db), sess
         )
     
     Body_Snippet = "partials/profile_body.html"
+    CSS_Name = "profile"
     if active_session:
         user_ID: int = db.query(models.session.user_ID).filter(models.session.token_value == session).first()[0]
         DB_Projects = db.query(models.profile.project_title, models.profile.project_content).filter(models.profile.user_ID == user_ID)
         
-        # log_info("Profile Projects: ", DB_Projects)
-        
-        return templates.TemplateResponse("profile.html", {"request" : request, 
+        return templates.TemplateResponse("layout.html", {"request" : request, 
         "session": session,
         "Header_Snippet" : Header_Snippet,
         "Status_Snippet" : Status_Snippet,
         "Body_Snippet" : Body_Snippet,
         "Footer_Snippet" : Footer_Snippet,
+        "CSS_Name" : CSS_Name,
         "DB_Projects" : DB_Projects,
         })
         
@@ -287,14 +299,16 @@ async def add_project(request: Request, db: Session = Depends(database.get_db), 
         )
     
     Body_Snippet = "partials/add_project_body.html"
+    CSS_Name = "add_project"
     if active_session:
         
-        return templates.TemplateResponse("add_project.html", {"request" : request, 
+        return templates.TemplateResponse("layout.html", {"request" : request, 
         "session": session,
         "Header_Snippet" : Header_Snippet,
         "Status_Snippet" : Status_Snippet,
         "Body_Snippet" : Body_Snippet,
         "Footer_Snippet" : Footer_Snippet,
+        "CSS_Name" : CSS_Name,
         })
         
     else:
@@ -331,6 +345,7 @@ async def search(request: Request, session: str = Cookie(default=None, alias="se
         session,
         )
     Body_Snippet = "partials/search_body.html"
+    CSS_Name = "search"
 
     Search_Prompt: str = request.query_params.get("Search_Prompt")
 
@@ -348,12 +363,13 @@ async def search(request: Request, session: str = Cookie(default=None, alias="se
             )
         ).all()
     
-    return templates.TemplateResponse("search.html", {"request" : request, 
+    return templates.TemplateResponse("layout.html", {"request" : request, 
         "session": session,
         "Header_Snippet" : Header_Snippet,
         "Status_Snippet" : Status_Snippet,
         "Body_Snippet" : Body_Snippet,
         "Footer_Snippet" : Footer_Snippet,
+        "CSS_Name" : CSS_Name,
         "Search_Result" : Search_Result,
         "Search_Prompt" : Search_Prompt,
         })

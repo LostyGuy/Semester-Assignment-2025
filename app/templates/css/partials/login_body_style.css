@@ -1,0 +1,12 @@
+#left_header, #right_header{
+    min-width: 50%;
+    float: left;
+}
+
+#left_header > img{
+    float: left;
+}
+
+main{
+    width: 100%;
+}

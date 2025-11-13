@@ -1,0 +1,17 @@
+main{
+    width: 100%;
+}
+
+main > .top_4_repos{
+    width: 80%;
+    margin: auto;
+    clear: both;
+    background-color: red;
+}
+
+main > .top_4_repos > p{
+    width: 49%;
+    float: left;
+    background-color: rgb(17, 76, 80);
+    border: solid yellow 1px;
+}

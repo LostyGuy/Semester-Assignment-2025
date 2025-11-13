@@ -1,0 +1,15 @@
+main {
+    width: 100%;        
+}
+
+.left, .right {
+    float: left;
+}
+
+.left {
+    width: 80%;
+}
+
+.right {
+    width: 18%;
+}
