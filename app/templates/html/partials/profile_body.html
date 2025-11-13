@@ -1,17 +1,20 @@
 <main>
     <br>
-    <section class="left">
+    <section class="blank_space"></section>
+    <section class="center">
         <h1>Projects</h1>
         {%for block in DB_Projects%}
             <section class="block" id={{block[1]}}>
-                <h1>{{block[0]}}</h1>
+                <h2>{{block[0]}}</h2>
                 <h4>{{block[1]}}</h4>
             </section>
         {%endfor%}
     </section>
     <section class="right">
-        <button onclick='window.location.href=`{{ url_for("add_project")}}`'>
+        <aside>
+            <button onclick='window.location.href=`{{ url_for("add_project")}}`'>
             Add Project
-        </button>
+            </button>
+        </aside>
     </section>
 </main>

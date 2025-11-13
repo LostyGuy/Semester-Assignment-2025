@@ -1,22 +1,22 @@
 main {
-    width: 100%;        
+    width: 100%;   
 }
 
-.left, .right {
+.center {
     float: left;
-}
-
-.left {
-    width: 80%;
-    margin: 10px;
+    max-width: 80%;
+    min-width: 80%;
+    margin-left: 10%;
+    /* margin-right: 10%; */
 }
 
 .right {
-    width: 20%;
+    min-width: 10%;
+    float: right;
 }
-
 .block {
-    width: 25%;
+    min-width: 20%;
+    max-width: 20%;
     float: left;
     border: solid white 1px;
 }

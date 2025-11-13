@@ -1,10 +1,33 @@
+/* .stack-sans-text {
+  font-family: "Stack Sans Text", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-style: normal;
+} */
+
+* {
+    font-family: "Stack Sans Text", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
+    overflow: hidden;
+}
+
 body{
-    background-color: black;
+    background-color: #3F89A6;
     color: white;
     text-decoration: none;
     margin: 0;
     align-content: center;
 }
+
+/* .blank_space {
+    min-width: 10%;
+    min-height: 90%;
+    float: left;
+    border: yellow solid 1px;
+} */
+
 a {
     text-decoration: none;
     color: white;   
